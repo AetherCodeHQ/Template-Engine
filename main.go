@@ -1,4 +1,3 @@
-
 package main
 
 import (
@@ -8,33 +7,24 @@ import (
 )
 
 func main() {
-	if len(os.Args) < 2 {
-		fmt.Println("usage: Template-Engine <bytes|lines|reverse|upper|lower>")
+	if len(os.Args) < 3 {
+		fmt.Println("usage: template-engine <template> <key=val> [key=val...]")
 		os.Exit(1)
 	}
-	mode := os.Args[1]
-	in := ""
-	if len(os.Args) > 2 {
-		in = os.Args[2]
+	data, err := os.ReadFile(os.Args[1])
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
 	}
-	lines := strings.Split(in, "\n")
-	switch mode {
-	case "lines":
-		fmt.Println(len(lines))
-	case "bytes":
-		fmt.Println(len(in))
-	case "upper":
-		fmt.Println(strings.ToUpper(in))
-	case "lower":
-		fmt.Println(strings.ToLower(in))
-	case "reverse":
-		runes := []rune(in)
-		for i, j := 0, len(runes)-1; i < j; i, j = i+1, j-1 {
-			runes[i], runes[j] = runes[j], runes[i]
+	result := string(data)
+	for _, kv := range os.Args[2:] {
+		parts := strings.SplitN(kv, "=", 2)
+		if len(parts) == 2 {
+			result = strings.ReplaceAll(result, "{{"+parts[0]+"}}", parts[1])
+			result = strings.ReplaceAll(result, "{{ "+parts[0]+" }}", parts[1])
 		}
-		fmt.Println(string(runes))
-	default:
-		fmt.Fprintln(os.Stderr, "unknown mode:", mode)
-		os.Exit(1)
 	}
+	remaining := strings.Count(result, "{{")
+	fmt.Print(result)
+	fmt.Fprintf(os.Stderr, "rendered (%d unresolved)\n", remaining)
 }
